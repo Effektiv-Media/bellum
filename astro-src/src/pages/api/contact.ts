@@ -136,7 +136,7 @@ ${meddelande}
   `.trim();
 
   try {
-    const result = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'Bellums Kontaktformulär <noreply@bellums.se>',
       to: ['hampus@bellums.se', 'Leads@effektivmedia.nu'],
       replyTo: epost,
@@ -145,7 +145,15 @@ ${meddelande}
       text: textBody,
     });
 
-    return new Response(JSON.stringify({ ok: true, id: result.data?.id ?? null }), {
+    if (error) {
+      console.error('Resend error:', error);
+      return new Response(JSON.stringify({ error: 'E-post kunde inte skickas. Försök igen eller kontakta oss direkt.', detail: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, id: data?.id ?? null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
