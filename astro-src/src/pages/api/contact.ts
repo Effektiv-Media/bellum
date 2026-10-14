@@ -137,7 +137,7 @@ ${meddelande}
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Bellums Kontaktformulär <noreply@bellums.se>',
+      from: 'Bellums Kontaktformulär <onboarding@resend.dev>',
       to: ['hampus@bellums.se', 'Leads@effektivmedia.nu'],
       replyTo: epost,
       subject: `Ny offertförfrågan från ${namn} – Bellums Volym Två AB`,
