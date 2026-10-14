@@ -3,6 +3,14 @@ import { Resend } from 'resend';
 
 export const prerender = false;
 
+function isSpam(website: string, ts: string): boolean {
+  if (website.trim() !== '') return true;
+  const submitted = parseInt(ts, 10);
+  if (isNaN(submitted) || submitted === 0) return true;
+  if (Date.now() - submitted < 3000) return true;
+  return false;
+}
+
 export const POST: APIRoute = async ({ request }) => {
   const resend = new Resend(import.meta.env.RESEND_API_KEY);
 
@@ -12,6 +20,16 @@ export const POST: APIRoute = async ({ request }) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Ogiltig förfrågan' }), {
       status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const website = data.get('website')?.toString() ?? '';
+  const ts = data.get('ts')?.toString() ?? '0';
+
+  if (isSpam(website, ts)) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -27,7 +45,6 @@ export const POST: APIRoute = async ({ request }) => {
   const startdatum = data.get('startdatum')?.toString().trim() ?? '';
   const meddelande = data.get('meddelande')?.toString().trim() ?? '';
 
-  // Validering
   if (!namn || !telefon || !epost || !ort || !tjanst || !meddelande) {
     return new Response(JSON.stringify({ error: 'Namn, telefon, e-post, ort, tjänst och meddelande är obligatoriska.' }), {
       status: 400,
@@ -35,7 +52,6 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  // Enkel e-postvalidering
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(epost)) {
     return new Response(JSON.stringify({ error: 'Ogiltig e-postadress.' }), {
@@ -44,21 +60,18 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  // Telefonnummervalidering (om angivet)
-  if (telefon && !/^[\d\s\-\+\(\)]{7,20}$/.test(telefon)) {
+  if (!/^[\d\s\-\+\(\)]{7,20}$/.test(telefon)) {
     return new Response(JSON.stringify({ error: 'Ogiltigt telefonnummer.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // Bygg e-postinnehåll
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
       <h2 style="color: #C98A3D; border-bottom: 2px solid #C98A3D; padding-bottom: 10px;">
-        Ny offertförfrågan via bellums.se
+        Ny offertförfrågan via bellumsab.se
       </h2>
-
       <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <tr style="background: #f5f5f5;">
           <td style="padding: 10px; font-weight: bold; width: 40%;">Namn</td>
@@ -66,7 +79,7 @@ export const POST: APIRoute = async ({ request }) => {
         </tr>
         <tr>
           <td style="padding: 10px; font-weight: bold;">Telefon</td>
-          <td style="padding: 10px;">${escapeHtml(telefon) || '–'}</td>
+          <td style="padding: 10px;">${escapeHtml(telefon)}</td>
         </tr>
         <tr style="background: #f5f5f5;">
           <td style="padding: 10px; font-weight: bold;">E-post</td>
@@ -74,11 +87,11 @@ export const POST: APIRoute = async ({ request }) => {
         </tr>
         <tr>
           <td style="padding: 10px; font-weight: bold;">Ort</td>
-          <td style="padding: 10px;">${escapeHtml(ort) || '–'}</td>
+          <td style="padding: 10px;">${escapeHtml(ort)}</td>
         </tr>
         <tr style="background: #f5f5f5;">
           <td style="padding: 10px; font-weight: bold;">Tjänst</td>
-          <td style="padding: 10px;">${escapeHtml(tjanst) || '–'}</td>
+          <td style="padding: 10px;">${escapeHtml(tjanst)}</td>
         </tr>
         <tr>
           <td style="padding: 10px; font-weight: bold;">Golvyta</td>
@@ -97,26 +110,22 @@ export const POST: APIRoute = async ({ request }) => {
           <td style="padding: 10px;">${escapeHtml(startdatum) || '–'}</td>
         </tr>
       </table>
-
       <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #C98A3D; border-radius: 4px;">
         <strong>Meddelande:</strong><br>
         <p style="margin-top: 8px; white-space: pre-wrap;">${escapeHtml(meddelande)}</p>
       </div>
-
-      <p style="margin-top: 20px; font-size: 12px; color: #888;">
-        Skickat från bellums.se kontaktformulär
-      </p>
+      <p style="margin-top: 20px; font-size: 12px; color: #888;">Skickat från bellumsab.se kontaktformulär</p>
     </div>
   `;
 
   const textBody = `
-Ny offertförfrågan via bellums.se
+Ny offertförfrågan via bellumsab.se
 
 Namn: ${namn}
-Telefon: ${telefon || '–'}
+Telefon: ${telefon}
 E-post: ${epost}
-Ort: ${ort || '–'}
-Tjänst: ${tjanst || '–'}
+Ort: ${ort}
+Tjänst: ${tjanst}
 Golvyta: ${golvyta ? golvyta + ' m²' : '–'}
 Golvtyp: ${golvtyp || '–'}
 Fastighetstyp: ${fastighetstyp || '–'}
@@ -127,7 +136,7 @@ ${meddelande}
   `.trim();
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: 'Bellums Kontaktformulär <noreply@bellums.se>',
       to: ['hampus@bellums.se', 'Leads@effektivmedia.nu'],
       replyTo: epost,
@@ -136,7 +145,7 @@ ${meddelande}
       text: textBody,
     });
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, id: result.data?.id ?? null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

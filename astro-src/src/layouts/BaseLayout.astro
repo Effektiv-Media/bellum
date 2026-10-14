@@ -9,6 +9,8 @@ interface Props {
 }
 
 const { title, description, jsonLd, ogImage = '/images/kund/bellums-team-renovering-lagenhet.webp' } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImageAbsolute = new URL(ogImage, Astro.site).href;
 ---
 <!DOCTYPE html>
 <html lang="sv">
@@ -18,16 +20,23 @@ const { title, description, jsonLd, ogImage = '/images/kund/bellums-team-renover
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="canonical" href={Astro.url.href} />
+  <link rel="canonical" href={canonicalURL} />
+  <meta name="google-site-verification" content="Fgk6nHpwxn_MPp-W5P9zm8mdSLu1kCCjM6Lt21fwuJQ" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
-  <meta property="og:image" content={ogImage} />
+  <meta property="og:url" content={canonicalURL} />
+  <meta property="og:image" content={ogImageAbsolute} />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="sv_SE" />
+  <meta name="twitter:card" content="summary_large_image" />
   {jsonLd && (
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   )}
 </head>
 <body>
   <slot />
+  <script src="https://leadsportal.effektivmedia.se/tracker.js"
+          data-customer-token="462e80d1ae048f7540294c1b6c50a017"
+          defer></script>
 </body>
 </html>

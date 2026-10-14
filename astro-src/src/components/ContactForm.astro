@@ -13,6 +13,13 @@
 >
   <h3>Begär offert</h3>
 
+  <!-- Honeypot – dolt för användare, fylls bara i av bots -->
+  <div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true" tabindex="-1">
+    <label for="website">Lämna tomt</label>
+    <input type="text" id="website" name="website" autocomplete="off" tabindex="-1" />
+  </div>
+  <input type="hidden" name="ts" id="form-ts" value="0" />
+
   <div class="form-row">
     <div class="form-group">
       <label for="namn">Namn <span class="required" aria-hidden="true">*</span></label>
@@ -150,9 +157,14 @@
   const successMsg = document.getElementById('form-success') as HTMLElement | null;
   const errorMsg = document.getElementById('form-error') as HTMLElement | null;
 
+  // Sätt timestamp när sidan laddas
+  const tsField = document.getElementById('form-ts') as HTMLInputElement | null;
+  if (tsField) tsField.value = String(Date.now());
+
   if (form && submitBtn && successMsg && errorMsg) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (submitBtn.disabled) return;
 
       // Reset messages
       successMsg.style.display = 'none';
